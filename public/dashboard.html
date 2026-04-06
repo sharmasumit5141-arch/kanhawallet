@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Kanha Wallet</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; }
+.topbar { background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; color: white; }
+.topbar h2 { font-size: 20px; }
+.topbar p { font-size: 13px; opacity: 0.8; }
+.balance-card { background: white; margin: 16px; border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 4px 20px rgba(102,126,234,0.15); }
+.balance-card .label { color: #888; font-size: 13px; }
+.balance-card .amount { font-size: 42px; font-weight: 800; color: #667eea; margin: 8px 0; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 16px 16px; }
+.action-btn { background: white; border-radius: 14px; padding: 18px 10px; text-align: center; text-decoration: none; color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.action-btn .icon { font-size: 26px; display: block; margin-bottom: 6px; }
+.action-btn span { font-size: 12px; font-weight: 600; color: #555; }
+.section { background: white; margin: 0 16px 16px; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.section h3 { font-size: 15px; color: #333; margin-bottom: 14px; }
+.txn-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+.txn-item:last-child { border: none; }
+.txn-left .name { font-weight: 600; font-size: 14px; }
+.txn-left .note { font-size: 12px; color: #888; }
+.txn-right .amt { font-weight: 700; font-size: 15px; }
+.txn-right .amt.credit { color: #22c55e; }
+.txn-right .amt.debit { color: #ef4444; }
+.txn-right .date { font-size: 11px; color: #aaa; text-align: right; }
+.nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid #eee; padding: 8px 0 4px; }
+.nav a { flex: 1; text-align: center; text-decoration: none; color: #aaa; font-size: 11px; padding: 4px; }
+.nav a.active { color: #667eea; }
+.nav a .ni { font-size: 22px; display: block; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h2>🪷 Kanha Wallet</h2>
+  <p id="userName">Loading...</p>
+</div>
+<div class="balance-card">
+  <div class="label">Total Balance</div>
+  <div class="amount" id="balance">₹0</div>
+  <small id="mobile" style="color:#aaa;font-size:12px;"></small>
+</div>
+<div class="grid">
+  <a class="action-btn" href="transfer.html"><span class="icon">💸</span><span>Transfer</span></a>
+  <a class="action-btn" href="deposit.html"><span class="icon">➕</span><span>Add Money</span></a>
+  <a class="action-btn" href="withdraw.html"><span class="icon">🏧</span><span>Withdraw</span></a>
+  <a class="action-btn" href="lifafa.html"><span class="icon">🎴</span><span>Lifafa</span></a>
+  <a class="action-btn" href="code.html"><span class="icon">🎟️</span><span>Gift Code</span></a>
+  <a class="action-btn" href="qr.html"><span class="icon">📷</span><span>QR Code</span></a>
+</div>
+<div class="section">
+  <h3>Recent Transactions</h3>
+  <div id="txnList"><p style="color:#aaa;font-size:13px;">Loading...</p></div>
+</div>
+<div style="height:70px;"></div>
+<nav class="nav">
+  <a href="dashboard.html" class="active"><span class="ni">🏠</span>Home</a>
+  <a href="transactions.html"><span class="ni">📋</span>History</a>
+  <a href="tg.html"><span class="ni">📱</span>Apps</a>
+  <a href="settings.html"><span class="ni">⚙️</span>Settings</a>
+</nav>
+<script>
+const token = localStorage.getItem('token');
+if (!token) window.location.href = 'index.html';
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+document.getElementById('userName').textContent = 'Hello, ' + (user.name || '');
+document.getElementById('mobile').textContent = user.mobile || '';
+
+async function load() {
+  const h = { Authorization: 'Bearer ' + token };
+  const r = await fetch('/api/wallet/balance', { headers: h });
+  const d = await r.json();
+  document.getElementById('balance').textContent = '₹' + (d.balance || 0).toFixed(2);
+
+  const tr = await fetch('/api/wallet/transactions', { headers: h });
+  const txns = await tr.json();
+  const list = document.getElementById('txnList');
+  if (!txns.length) { list.innerHTML = '<p style="color:#aaa;font-size:13px;text-align:center;">No transactions yet</p>'; return; }
+  list.innerHTML = txns.slice(0,5).map(t => {
+    const isCredit = t.receiver?._id === user._id || t.type==='deposit'||t.type==='gift'||t.type==='lifafa';
+    const name = isCredit ? (t.sender?.name || 'System') : (t.receiver?.name || 'Withdraw');
+    return `<div class="txn-item">
+      <div class="txn-left"><div class="name">${name}</div><div class="note">${t.note||t.type}</div></div>
+      <div class="txn-right"><div class="amt ${isCredit?'credit':'debit'}">${isCredit?'+':'-'}₹${t.amount}</div><div class="date">${new Date(t.createdAt).toLocaleDateString()}</div></div>
+    </div>`;
+  }).join('');
+}
+load();
+</script>
+</body>
+</html>
