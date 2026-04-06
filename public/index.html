@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanha Wallet</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: white; border-radius: 20px; padding: 40px 30px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.logo { text-align: center; margin-bottom: 30px; }
+.logo h1 { font-size: 28px; color: #667eea; font-weight: 800; }
+.logo p { color: #888; font-size: 13px; }
+.tabs { display: flex; background: #f5f5f5; border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+.tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; color: #888; transition: all 0.2s; }
+.tab.active { background: white; color: #667eea; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+input { width: 100%; padding: 12px 16px; border: 2px solid #eee; border-radius: 10px; font-size: 15px; outline: none; transition: border 0.2s; }
+input:focus { border-color: #667eea; }
+.btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.btn:hover { opacity: 0.9; }
+.msg { text-align: center; margin-top: 12px; font-size: 13px; padding: 10px; border-radius: 8px; display: none; }
+.msg.error { background: #fee; color: #c00; display: block; }
+.msg.success { background: #efe; color: #060; display: block; }
+#registerForm { display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>🪷 Kanha Wallet</h1>
+    <p>Your Digital Payment Partner</p>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('login')">Login</div>
+    <div class="tab" onclick="switchTab('register')">Register</div>
+  </div>
+  <div id="loginForm">
+    <div class="form-group">
+      <label>Mobile Number</label>
+      <input type="tel" id="loginMobile" placeholder="10-digit mobile number" maxlength="10">
+    </div>
+    <div class="form-group">
+      <label>PIN</label>
+      <input type="password" id="loginPin" placeholder="Enter PIN" maxlength="6">
+    </div>
+    <button class="btn" onclick="login()">Login</button>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+  <div id="registerForm">
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="regName" placeholder="Your name">
+    </div>
+    <div class="form-group">
+      <label>Mobile Number</label>
+      <input type="tel" id="regMobile" placeholder="10-digit mobile number" maxlength="10">
+    </div>
+    <div class="form-group">
+      <label>Set PIN (4-6 digits)</label>
+      <input type="password" id="regPin" placeholder="Set your PIN" maxlength="6">
+    </div>
+    <button class="btn" onclick="register()">Create Account</button>
+    <div id="regMsg" class="msg"></div>
+  </div>
+</div>
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+}
+async function login() {
+  const mobile = document.getElementById('loginMobile').value;
+  const pin = document.getElementById('loginPin').value;
+  const msg = document.getElementById('loginMsg');
+  try {
+    const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({mobile, pin}) });
+    const d = await r.json();
+    if (d.success) {
+      localStorage.setItem('token', d.token);
+      localStorage.setItem('user', JSON.stringify(d.user));
+      window.location.href = d.user.isAdmin ? 'admindash.html' : 'dashboard.html';
+    } else { msg.className='msg error'; msg.textContent=d.error; }
+  } catch { msg.className='msg error'; msg.textContent='Server error'; }
+}
+async function register() {
+  const name = document.getElementById('regName').value;
+  const mobile = document.getElementById('regMobile').value;
+  const pin = document.getElementById('regPin').value;
+  const msg = document.getElementById('regMsg');
+  try {
+    const r = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, mobile, pin}) });
+    const d = await r.json();
+    if (d.success) {
+      localStorage.setItem('token', d.token);
+      localStorage.setItem('user', JSON.stringify(d.user));
+      window.location.href = 'dashboard.html';
+    } else { msg.className='msg error'; msg.textContent=d.error; }
+  } catch { msg.className='msg error'; msg.textContent='Server error'; }
+}
+if (localStorage.getItem('token')) window.location.href = 'dashboard.html';
+</script>
+</body>
+</html>
